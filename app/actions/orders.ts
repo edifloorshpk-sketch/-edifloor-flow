@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { getStaffIdentity } from "@/lib/identity";
 
 export async function getProductCatalog() {
   const supabase = await createClient();
@@ -30,6 +31,7 @@ export async function createProductOrder(formData: FormData) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const identity = await getStaffIdentity();
 
   const itemsRaw = String(formData.get("items_json") ?? "[]");
   const items: { product_id: string; quantity: number; unit: string; color_ral?: string; finish?: string }[] =
@@ -46,6 +48,7 @@ export async function createProductOrder(formData: FormData) {
     transport: (formData.get("transport") as string) || null,
     notes: (formData.get("notes") as string) || null,
     created_by: user?.id,
+    staff_member_id: identity?.id ?? null,
   };
 
   const { data: order, error } = await supabase.from("product_orders").insert(payload).select("id").single();

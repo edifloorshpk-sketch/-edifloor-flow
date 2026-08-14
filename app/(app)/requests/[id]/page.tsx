@@ -14,7 +14,7 @@ export default async function WorkRequestDetailPage({ params }: { params: Promis
   const supabase = await createClient();
 
   const [{ data: request }, { data: project }] = await Promise.all([
-    supabase.from("work_requests").select("*, customers(id, name, phone, whatsapp), floor_systems(name, layer_count)").eq("id", id).single(),
+    supabase.from("work_requests").select("*, customers(id, name, phone, whatsapp), floor_systems(name, layer_count), staff_members(name)").eq("id", id).single(),
     supabase.from("projects").select("id, status").eq("work_request_id", id).maybeSingle(),
   ]);
 
@@ -32,7 +32,10 @@ export default async function WorkRequestDetailPage({ params }: { params: Promis
         <h1 className="font-display text-xl font-semibold">
           <Link href={`/customers/${customer.id}`} className="hover:underline">{customer.name}</Link>
         </h1>
-        <p className="text-sm text-muted">{request.location_text}</p>
+        <p className="text-sm text-muted">
+          {request.location_text}
+          {request.staff_members?.name && ` · Regjistroi: ${request.staff_members.name}`}
+        </p>
       </div>
 
       <Card>

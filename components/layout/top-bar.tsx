@@ -3,6 +3,7 @@ import { Bell } from "lucide-react";
 import { ROLE_LABELS, type UserRole } from "@/lib/types/database";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { DesktopUserMenu } from "@/components/layout/desktop-user-menu";
+import { getStaffIdentity } from "@/lib/identity";
 
 const navLinks = [
   { href: "/dashboard", label: "Kryefaqja" },
@@ -12,7 +13,9 @@ const navLinks = [
   { href: "/more", label: "Më shumë" },
 ];
 
-export function TopBar({ fullName, role }: { fullName: string; role: UserRole }) {
+export async function TopBar({ fullName, role }: { fullName: string; role: UserRole }) {
+  const identity = await getStaffIdentity();
+
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-surface/90 backdrop-blur">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
@@ -34,7 +37,13 @@ export function TopBar({ fullName, role }: { fullName: string; role: UserRole })
             ))}
           </nav>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
+          <Link
+            href="/identity"
+            className="tap-target flex items-center gap-1.5 rounded-full border border-border px-3 text-xs font-medium hover:border-gold"
+          >
+            {identity ? identity.name : "Kush je ti?"}
+          </Link>
           <ThemeToggle />
           <Link
             href="/notifications"

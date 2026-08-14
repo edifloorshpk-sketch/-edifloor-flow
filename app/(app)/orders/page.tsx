@@ -11,7 +11,7 @@ export default async function OrdersPage() {
   const supabase = await createClient();
   const { data: orders } = await supabase
     .from("product_orders")
-    .select("id, order_number, status, requested_deadline, customers(name)")
+    .select("id, order_number, status, requested_deadline, customers(name), staff_members(name)")
     .eq("is_archived", false)
     .order("created_at", { ascending: false })
     .limit(50);
@@ -36,7 +36,7 @@ export default async function OrdersPage() {
                   <div>
                     <p className="text-sm font-medium">{o.order_number}</p>
                     {/* @ts-expect-error joined relation */}
-                    <p className="text-xs text-muted">{o.customers?.name}</p>
+                    <p className="text-xs text-muted">{o.customers?.name}{o.staff_members?.name && ` · ${o.staff_members.name}`}</p>
                   </div>
                   <span className="text-xs text-muted">{PRODUCT_ORDER_STATUS_LABELS[o.status as ProductOrderStatus]}</span>
                 </div>

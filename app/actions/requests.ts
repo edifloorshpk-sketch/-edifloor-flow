@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { getStaffIdentity } from "@/lib/identity";
 
 export async function getFloorSystems() {
   const supabase = await createClient();
@@ -25,6 +26,7 @@ export async function createWorkRequest(formData: FormData) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const identity = await getStaffIdentity();
 
   const payload = {
     customer_id: String(formData.get("customer_id") ?? ""),
@@ -42,6 +44,7 @@ export async function createWorkRequest(formData: FormData) {
     price_per_sqm: Number(formData.get("price_per_sqm") ?? 0) || null,
     client_notes: (formData.get("client_notes") as string) || null,
     created_by: user?.id,
+    staff_member_id: identity?.id ?? null,
   };
 
   const { data, error } = await supabase.from("work_requests").insert(payload).select("id").single();

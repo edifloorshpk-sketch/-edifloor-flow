@@ -19,7 +19,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   const supabase = await createClient();
 
   const [{ data: order }, { data: items }] = await Promise.all([
-    supabase.from("product_orders").select("*, customers(id, name, phone, whatsapp)").eq("id", id).single(),
+    supabase.from("product_orders").select("*, customers(id, name, phone, whatsapp), staff_members(name)").eq("id", id).single(),
     supabase.from("product_order_items").select("*, products(name, code)").eq("product_order_id", id),
   ]);
 
@@ -38,6 +38,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
         </h1>
         <p className="text-sm text-muted">
           {PRIORITY_LABELS[order.priority as keyof typeof PRIORITY_LABELS]} · Krijuar {new Date(order.created_at).toLocaleDateString("sq")}
+          {order.staff_members?.name && ` · Regjistroi: ${order.staff_members.name}`}
         </p>
       </div>
 

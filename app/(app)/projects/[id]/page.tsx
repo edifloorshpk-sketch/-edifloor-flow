@@ -2,6 +2,9 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { ChecklistItem } from "@/components/requests/checklist-item";
+import { PhotoUploader } from "@/components/requests/photo-uploader";
+import { getProjectPhotos } from "@/app/actions/photos";
+import { MapPin } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -9,9 +12,10 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: project }, { data: steps }] = await Promise.all([
+  const [{ data: project }, { data: steps }, photos] = await Promise.all([
     supabase.from("projects").select("*, work_requests(request_number, location_text, area_sqm, floor_system_id), customers(name, phone)").eq("id", id).single(),
     supabase.from("project_checklists").select("*").eq("project_id", id).order("step_order"),
+    getProjectPhotos(id),
   ]);
 
   if (!project) notFound();
@@ -29,6 +33,16 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         <p className="text-sm text-muted">{request?.location_text} · {request?.area_sqm} m²</p>
       </div>
 
+      {request?.location_text && (
+        <a
+          href={`https://maps.google.com/?q=${encodeURIComponent(request.location_text)}`}
+          target="_blank"
+          className="tap-target flex items-center justify-center gap-2 rounded-xl bg-gold px-4 text-sm font-medium text-gold-foreground"
+        >
+          <MapPin className="h-4 w-4" /> Hap navigimin në Google Maps
+        </a>
+      )}
+
       <Card>
         <div className="mb-2 flex items-center justify-between text-sm">
           <span className="font-medium">Checklista ditore</span>
@@ -45,9 +59,10 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         ))}
       </div>
 
-      <p className="text-xs text-muted">
-        Ngarkimi i fotografive (para/gjatë/pas) dhe navigimi te Google Maps do të shtohen te ky ekran në versionin e ardhshëm.
-      </p>
+      <section>
+        <h2 className="mb-2 font-display text-base font-semibold">Fotografitë</h2>
+        <PhotoUploader projectId={id} initialPhotos={photos as never} />
+      </section>
     </div>
   );
 }

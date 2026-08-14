@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { PRODUCT_ORDER_STATUS_LABELS, PRIORITY_LABELS, type ProductOrderStatus } from "@/lib/types/database";
 import { OrderStatusControl } from "@/components/orders/status-control";
+import { FileText } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,14 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
         <p className="mb-2 text-xs uppercase tracking-wide text-muted">Statusi</p>
         <OrderStatusControl orderId={order.id} currentStatus={order.status} flow={STATUS_FLOW} labels={PRODUCT_ORDER_STATUS_LABELS} />
       </Card>
+
+      <Link
+        href={`/print/orders/${order.id}`}
+        target="_blank"
+        className="tap-target flex items-center justify-center gap-2 rounded-xl border border-border bg-surface text-sm font-medium hover:border-gold"
+      >
+        <FileText className="h-4 w-4" /> Shiko / Printo konfirmimin (PDF)
+      </Link>
 
       <section>
         <h2 className="mb-2 font-display text-base font-semibold">Produktet</h2>

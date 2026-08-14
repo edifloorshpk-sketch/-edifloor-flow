@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { LogoutButton } from "@/components/layout/logout-button";
-import { Factory, Users, Package, ClipboardList, BarChart3, Settings } from "lucide-react";
+import { Factory, Users, Package, ClipboardList, BarChart3, Settings, Wallet } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -18,8 +18,9 @@ export default async function MorePage() {
   const items = [
     { href: "/customers", label: "Klientët", icon: Users, roles: ["super_admin", "menaxher", "shitje"] },
     { href: "/production", label: "Prodhimi", icon: Factory, roles: ["super_admin", "menaxher", "fabrike"] },
-    { href: "/catalog", label: "Katalogu i produkteve", icon: Package, roles: ["super_admin", "menaxher"] },
+    { href: "/admin/products", label: "Katalogu i produkteve", icon: Package, roles: ["super_admin", "menaxher"] },
     { href: "/reports", label: "Raportet", icon: BarChart3, roles: ["super_admin", "menaxher"] },
+    { href: "/payments", label: "Pagesat", icon: Wallet, roles: ["super_admin", "menaxher"] },
     { href: "/tasks", label: "Detyrat", icon: ClipboardList, roles: ["super_admin", "menaxher", "shitje", "fabrike", "terreni"] },
     { href: "/admin", label: "Paneli administrativ", icon: Settings, roles: ["super_admin"] },
   ].filter((i) => i.roles.includes(role));

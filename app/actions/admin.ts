@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 
 async function assertAdmin() {
@@ -121,6 +122,42 @@ export async function createFloorSystem(formData: FormData) {
 }
 
 // ---------- USERS / ROLES ----------
+export async function createStaffUser(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nuk jeni të kyçur");
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  if (profile?.role !== "super_admin") throw new Error("Vetëm Super Admin mund të shtojë punëtorë");
+
+  const email = String(formData.get("email") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+  const fullName = String(formData.get("full_name") ?? "").trim();
+  const role = String(formData.get("role") ?? "shitje");
+
+  if (!email || !password || !fullName) throw new Error("Plotëso emrin, email-in dhe fjalëkalimin");
+  if (password.length < 8) throw new Error("Fjalëkalimi duhet të ketë të paktën 8 shkronja/numra");
+
+  const admin = createAdminClient();
+  const { data: created, error } = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { full_name: fullName },
+  });
+  if (error || !created.user) throw new Error(error?.message ?? "Gabim gjatë krijimit të përdoruesit");
+
+  // the DB trigger auto-creates a profile row with role 'shitje' — update it to the chosen role
+  const { error: roleError } = await admin
+    .from("profiles")
+    .update({ role, full_name: fullName })
+    .eq("id", created.user.id);
+  if (roleError) throw new Error(roleError.message);
+
+  revalidatePath("/admin/users");
+}
+
 export async function updateUserRole(userId: string, role: string) {
   const supabase = await assertAdmin();
   const { error } = await supabase.from("profiles").update({ role }).eq("id", userId);

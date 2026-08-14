@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { UsersTable } from "@/components/admin/users-table";
+import { NewStaffForm } from "@/components/admin/new-staff-form";
 
 export const dynamic = "force-dynamic";
 
@@ -12,9 +13,10 @@ export default async function AdminUsersPage() {
       <div>
         <h1 className="font-display text-xl font-semibold">Përdoruesit dhe rolet</h1>
         <p className="text-sm text-muted">
-          Përdoruesit e rinj krijohen te Supabase → Authentication, pastaj shfaqen automatikisht këtu me rolin fillestar &quot;Shitje/Zyrë&quot; — ndrysho rolin sipas nevojës.
+          Shto punëtorë të rinj direkt këtu — email dhe fjalëkalim fillestar. Punëtori mund ta ndryshojë fjalëkalimin më vonë.
         </p>
       </div>
+      <NewStaffForm />
       <UsersTable users={(users ?? []) as never} />
     </div>
   );

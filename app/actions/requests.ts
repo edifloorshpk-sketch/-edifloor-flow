@@ -28,8 +28,25 @@ export async function createWorkRequest(formData: FormData) {
   } = await supabase.auth.getUser();
   const identity = await getStaffIdentity();
 
+  let customerId = String(formData.get("customer_id") ?? "");
+  if (!customerId) {
+    const newName = String(formData.get("customer_name") ?? "").trim();
+    if (!newName) throw new Error("Shkruaj emrin e klientit");
+    const { data: newCustomer, error: customerError } = await supabase
+      .from("customers")
+      .insert({
+        name: newName,
+        phone: (formData.get("customer_phone") as string) || null,
+        created_by: user?.id,
+      })
+      .select("id")
+      .single();
+    if (customerError || !newCustomer) throw new Error(customerError?.message ?? "Gabim gjatë krijimit të klientit");
+    customerId = newCustomer.id;
+  }
+
   const payload = {
-    customer_id: String(formData.get("customer_id") ?? ""),
+    customer_id: customerId,
     location_text: (formData.get("location_text") as string) || null,
     building_type: (formData.get("building_type") as string) || null,
     area_sqm: Number(formData.get("area_sqm") ?? 0) || null,

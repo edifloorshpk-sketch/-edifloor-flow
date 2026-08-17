@@ -66,13 +66,17 @@ export function NewOrderForm({
   return (
     <form action={createProductOrder} className="space-y-4">
       <input type="hidden" name="customer_id" value={customerId} />
+      <input type="hidden" name="customer_name" value={customerId ? "" : customerLabel} />
       <input type="hidden" name="items_json" value={itemsJson} />
 
       <Field label="Klienti *">
         <input
           value={customerLabel}
-          onChange={(e) => onCustomerSearch(e.target.value)}
-          placeholder="Kërko klientin sipas emrit ose telefonit…"
+          onChange={(e) => {
+            setCustomerId("");
+            onCustomerSearch(e.target.value);
+          }}
+          placeholder="Shkruaj emrin — nëse ekziston zgjidhe nga lista, ose thjesht vazhdo për klient të ri"
           className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold"
         />
         {customerResults.length > 0 && !customerId && (
@@ -93,7 +97,16 @@ export function NewOrderForm({
             ))}
           </div>
         )}
+        {!customerId && customerLabel && (
+          <p className="mt-1 text-xs text-muted">Do të krijohet si klient i ri: &quot;{customerLabel}&quot;</p>
+        )}
       </Field>
+
+      {!customerId && customerLabel && (
+        <Field label="Telefoni i klientit (opsionale)">
+          <input name="customer_phone" className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold" />
+        </Field>
+      )}
 
       <Field label="Burimi">
         <select name="source" className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold">
@@ -187,7 +200,7 @@ export function NewOrderForm({
         <textarea name="notes" rows={3} className="w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm outline-none focus:border-gold" />
       </Field>
 
-      <Button type="submit" className="w-full" disabled={!customerId}>
+      <Button type="submit" className="w-full" disabled={!customerId && !customerLabel.trim()}>
         Ruaj porosinë
       </Button>
     </form>

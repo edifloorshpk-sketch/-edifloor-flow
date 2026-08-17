@@ -39,8 +39,27 @@ export async function createProductOrder(formData: FormData) {
 
   if (!items.length) throw new Error("Shto të paktën një produkt");
 
+  // Resolve customer: use the picked one, or create a new one on the fly from the typed name/phone.
+  let customerId = String(formData.get("customer_id") ?? "");
+  if (!customerId) {
+    const newName = String(formData.get("customer_name") ?? "").trim();
+    if (!newName) throw new Error("Shkruaj emrin e klientit");
+    const { data: newCustomer, error: customerError } = await supabase
+      .from("customers")
+      .insert({
+        name: newName,
+        phone: (formData.get("customer_phone") as string) || null,
+        source: (formData.get("source") as string) || "tjeter",
+        created_by: user?.id,
+      })
+      .select("id")
+      .single();
+    if (customerError || !newCustomer) throw new Error(customerError?.message ?? "Gabim gjatë krijimit të klientit");
+    customerId = newCustomer.id;
+  }
+
   const payload = {
-    customer_id: String(formData.get("customer_id") ?? ""),
+    customer_id: customerId,
     source: (formData.get("source") as string) || "tjeter",
     priority: (formData.get("priority") as string) || "normale",
     requested_deadline: (formData.get("requested_deadline") as string) || null,

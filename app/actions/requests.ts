@@ -83,3 +83,11 @@ export async function searchCustomers(term: string) {
     .limit(8);
   return data ?? [];
 }
+
+export async function archiveWorkRequest(requestId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("work_requests").update({ is_archived: true }).eq("id", requestId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/requests");
+  redirect("/requests");
+}

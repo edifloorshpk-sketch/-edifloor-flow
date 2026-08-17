@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { createWorkRequest, searchCustomers } from "@/app/actions/requests";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Collapsible } from "@/components/ui/collapsible";
 import { calcSystemMaterials, type LayerInput } from "@/lib/calc/material";
 import { Search } from "lucide-react";
 
@@ -46,6 +47,8 @@ export function NewWorkRequestForm({
   const [customerResults, setCustomerResults] = useState<{ id: string; name: string; phone: string | null }[]>([]);
   const [systemId, setSystemId] = useState("");
   const [area, setArea] = useState<number>(0);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [, startTransition] = useTransition();
 
   const selectedSystem = systems.find((s) => s.id === systemId);
@@ -74,8 +77,22 @@ export function NewWorkRequestForm({
     });
   }
 
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    setSaving(true);
+    try {
+      await createWorkRequest(new FormData(e.currentTarget));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (message.includes("NEXT_REDIRECT")) return;
+      setError(message);
+      setSaving(false);
+    }
+  }
+
   return (
-    <form action={createWorkRequest} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4">
       <input type="hidden" name="customer_id" value={customerId} />
       <input type="hidden" name="customer_name" value={customerId ? "" : customerLabel} />
 
@@ -86,7 +103,7 @@ export function NewWorkRequestForm({
             setCustomerId("");
             onCustomerSearch(e.target.value);
           }}
-          placeholder="Shkruaj emrin — nëse ekziston zgjidhe nga lista, ose thjesht vazhdo për klient të ri"
+          placeholder="Shkruaj emrin e klientit…"
           className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold"
         />
         {customerResults.length > 0 && !customerId && (
@@ -108,36 +125,25 @@ export function NewWorkRequestForm({
           </div>
         )}
         {!customerId && customerLabel && (
-          <p className="mt-1 text-xs text-muted">Do të krijohet si klient i ri: &quot;{customerLabel}&quot;</p>
+          <p className="mt-1 text-xs text-muted">Klient i ri: &quot;{customerLabel}&quot;</p>
         )}
       </Field>
-
-      {!customerId && customerLabel && (
-        <Field label="Telefoni i klientit (opsionale)">
-          <input name="customer_phone" className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold" />
-        </Field>
-      )}
 
       <Field label="Lokacioni">
         <input name="location_text" className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold" />
       </Field>
 
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Lloji i objektit">
-          <input name="building_type" placeholder="p.sh. depo, parking" className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold" />
-        </Field>
-        <Field label="Sipërfaqja (m²) *">
-          <input
-            name="area_sqm"
-            type="number"
-            step="0.01"
-            required
-            value={area || ""}
-            onChange={(e) => setArea(Number(e.target.value))}
-            className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold"
-          />
-        </Field>
-      </div>
+      <Field label="Sipërfaqja (m²) *">
+        <input
+          name="area_sqm"
+          type="number"
+          step="0.01"
+          required
+          value={area || ""}
+          onChange={(e) => setArea(Number(e.target.value))}
+          className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold"
+        />
+      </Field>
 
       <Field label="Sistemi i dyshemesë *">
         <select
@@ -180,46 +186,56 @@ export function NewWorkRequestForm({
         </Card>
       )}
 
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Ngjyra RAL/NCS">
-          <input name="color_ral" className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold" />
-        </Field>
-        <Field label="Finish">
-          <select name="finish" className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold">
-            <option value="">—</option>
-            <option value="gloss">Gloss</option>
-            <option value="matt">Matt</option>
-            <option value="semi_matt">Semi-Matt</option>
-            <option value="transparente">Transparente</option>
-            <option value="me_ngjyre">Me ngjyrë</option>
-          </select>
-        </Field>
-      </div>
+      <Field label="Afati (opsionale)">
+        <input name="deadline" type="date" className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold" />
+      </Field>
 
-      <div className="grid grid-cols-2 gap-3">
+      <Collapsible label="Më shumë detaje (opsionale)">
+        {!customerId && customerLabel && (
+          <Field label="Telefoni i klientit">
+            <input name="customer_phone" className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold" />
+          </Field>
+        )}
+        <Field label="Lloji i objektit">
+          <input name="building_type" placeholder="p.sh. depo, parking" className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold" />
+        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Ngjyra RAL/NCS">
+            <input name="color_ral" className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold" />
+          </Field>
+          <Field label="Finish">
+            <select name="finish" className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold">
+              <option value="">—</option>
+              <option value="gloss">Gloss</option>
+              <option value="matt">Matt</option>
+              <option value="semi_matt">Semi-Matt</option>
+              <option value="transparente">Transparente</option>
+              <option value="me_ngjyre">Me ngjyrë</option>
+            </select>
+          </Field>
+        </div>
         <Field label="Data e vizitës">
           <input name="visit_date" type="date" className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold" />
         </Field>
-        <Field label="Afati">
-          <input name="deadline" type="date" className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold" />
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Çmimi për m²">
+            <input name="price_per_sqm" type="number" step="0.01" className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold" />
+          </Field>
+          <Field label="Buxheti i përafërt">
+            <input name="estimated_budget" type="number" step="0.01" className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold" />
+          </Field>
+        </div>
+        <Field label="Shënimet e klientit">
+          <textarea name="client_notes" rows={2} className="w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm outline-none focus:border-gold" />
         </Field>
-      </div>
+      </Collapsible>
 
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Çmimi për m²">
-          <input name="price_per_sqm" type="number" step="0.01" className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold" />
-        </Field>
-        <Field label="Buxheti i përafërt">
-          <input name="estimated_budget" type="number" step="0.01" className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold" />
-        </Field>
-      </div>
+      {error && (
+        <p className="rounded-xl border border-danger bg-danger/5 px-4 py-3 text-sm text-danger">{error}</p>
+      )}
 
-      <Field label="Shënimet e klientit">
-        <textarea name="client_notes" rows={3} className="w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm outline-none focus:border-gold" />
-      </Field>
-
-      <Button type="submit" className="w-full" disabled={!customerId && !customerLabel.trim()}>
-        Ruaj kërkesën
+      <Button type="submit" className="w-full" disabled={saving || (!customerId && !customerLabel.trim())}>
+        {saving ? "Duke ruajtur…" : "Ruaj kërkesën"}
       </Button>
     </form>
   );

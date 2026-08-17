@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { createProductOrder, searchCustomersForOrder } from "@/app/actions/orders";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Collapsible } from "@/components/ui/collapsible";
 import { Plus, Trash2, Search } from "lucide-react";
 
 interface ProductOption {
@@ -35,6 +36,10 @@ export function NewOrderForm({
   const [lines, setLines] = useState<Line[]>([
     { key: crypto.randomUUID(), product_id: "", quantity: 0, unit: "kg", color_ral: "", finish: "" },
   ]);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [priority, setPriority] = useState("normale");
+  const [source, setSource] = useState("telefon");
   const [, startTransition] = useTransition();
 
   function onCustomerSearch(term: string) {
@@ -43,6 +48,20 @@ export function NewOrderForm({
       const results = await searchCustomersForOrder(term);
       setCustomerResults(results as never);
     });
+  }
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    setSaving(true);
+    try {
+      await createProductOrder(new FormData(e.currentTarget));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (message.includes("NEXT_REDIRECT")) return;
+      setError(message);
+      setSaving(false);
+    }
   }
 
   function updateLine(key: string, patch: Partial<Line>) {
@@ -64,10 +83,12 @@ export function NewOrderForm({
   );
 
   return (
-    <form action={createProductOrder} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4">
       <input type="hidden" name="customer_id" value={customerId} />
       <input type="hidden" name="customer_name" value={customerId ? "" : customerLabel} />
       <input type="hidden" name="items_json" value={itemsJson} />
+      <input type="hidden" name="source" value={source} />
+      <input type="hidden" name="priority" value={priority} />
 
       <Field label="Klienti *">
         <input
@@ -76,7 +97,7 @@ export function NewOrderForm({
             setCustomerId("");
             onCustomerSearch(e.target.value);
           }}
-          placeholder="Shkruaj emrin — nëse ekziston zgjidhe nga lista, ose thjesht vazhdo për klient të ri"
+          placeholder="Shkruaj emrin e klientit…"
           className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold"
         />
         {customerResults.length > 0 && !customerId && (
@@ -98,25 +119,8 @@ export function NewOrderForm({
           </div>
         )}
         {!customerId && customerLabel && (
-          <p className="mt-1 text-xs text-muted">Do të krijohet si klient i ri: &quot;{customerLabel}&quot;</p>
+          <p className="mt-1 text-xs text-muted">Klient i ri: &quot;{customerLabel}&quot;</p>
         )}
-      </Field>
-
-      {!customerId && customerLabel && (
-        <Field label="Telefoni i klientit (opsionale)">
-          <input name="customer_phone" className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold" />
-        </Field>
-      )}
-
-      <Field label="Burimi">
-        <select name="source" className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold">
-          <option value="telefon">Telefon</option>
-          <option value="whatsapp">WhatsApp</option>
-          <option value="email">Email</option>
-          <option value="showroom">Showroom</option>
-          <option value="terren">Terren</option>
-          <option value="tjeter">Tjetër</option>
-        </select>
       </Field>
 
       <section className="space-y-3">
@@ -137,37 +141,19 @@ export function NewOrderForm({
                   <option key={p.id} value={p.id}>{p.code} — {p.name}</option>
                 ))}
               </select>
-              <button type="button" onClick={() => removeLine(line.key)} className="tap-target rounded-xl border border-border px-2 text-danger">
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
               <input
                 type="number"
                 step="0.01"
                 placeholder="Sasia"
                 value={line.quantity || ""}
                 onChange={(e) => updateLine(line.key, { quantity: Number(e.target.value) })}
-                className="tap-target rounded-xl border border-border bg-surface px-3 text-sm outline-none focus:border-gold"
+                className="tap-target w-24 rounded-xl border border-border bg-surface px-3 text-sm outline-none focus:border-gold"
               />
-              <input
-                placeholder="Ngjyra RAL"
-                value={line.color_ral}
-                onChange={(e) => updateLine(line.key, { color_ral: e.target.value })}
-                className="tap-target rounded-xl border border-border bg-surface px-3 text-sm outline-none focus:border-gold"
-              />
-              <select
-                value={line.finish}
-                onChange={(e) => updateLine(line.key, { finish: e.target.value })}
-                className="tap-target rounded-xl border border-border bg-surface px-3 text-sm outline-none focus:border-gold"
-              >
-                <option value="">Finish —</option>
-                <option value="gloss">Gloss</option>
-                <option value="matt">Matt</option>
-                <option value="semi_matt">Semi-Matt</option>
-                <option value="transparente">Transparente</option>
-                <option value="me_ngjyre">Me ngjyrë</option>
-              </select>
+              {lines.length > 1 && (
+                <button type="button" onClick={() => removeLine(line.key)} className="tap-target rounded-xl border border-border px-2 text-danger">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
             </div>
           </Card>
         ))}
@@ -176,32 +162,53 @@ export function NewOrderForm({
         </button>
       </section>
 
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Prioriteti">
-          <select name="priority" className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold">
-            <option value="normale">Normale</option>
-            <option value="e_ulet">E ulët</option>
-            <option value="e_larte">E lartë</option>
-            <option value="urgjente">Urgjente</option>
-          </select>
-        </Field>
-        <Field label="Afati i kërkuar">
-          <input name="requested_deadline" type="date" className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold" />
-        </Field>
-      </div>
-
-      <Field label="Adresa e dorëzimit">
-        <input name="delivery_address" className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold" />
-      </Field>
-      <Field label="Transporti">
-        <input name="transport" className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold" />
-      </Field>
-      <Field label="Shënime">
-        <textarea name="notes" rows={3} className="w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm outline-none focus:border-gold" />
+      <Field label="Afati i kërkuar (opsionale)">
+        <input name="requested_deadline" type="date" className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold" />
       </Field>
 
-      <Button type="submit" className="w-full" disabled={!customerId && !customerLabel.trim()}>
-        Ruaj porosinë
+      <Collapsible label="Më shumë detaje (opsionale)">
+        {!customerId && customerLabel && (
+          <Field label="Telefoni i klientit">
+            <input name="customer_phone" className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold" />
+          </Field>
+        )}
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Prioriteti">
+            <select value={priority} onChange={(e) => setPriority(e.target.value)} className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold">
+              <option value="normale">Normale</option>
+              <option value="e_ulet">E ulët</option>
+              <option value="e_larte">E lartë</option>
+              <option value="urgjente">Urgjente</option>
+            </select>
+          </Field>
+          <Field label="Burimi">
+            <select value={source} onChange={(e) => setSource(e.target.value)} className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold">
+              <option value="telefon">Telefon</option>
+              <option value="whatsapp">WhatsApp</option>
+              <option value="email">Email</option>
+              <option value="showroom">Showroom</option>
+              <option value="terren">Terren</option>
+              <option value="tjeter">Tjetër</option>
+            </select>
+          </Field>
+        </div>
+        <Field label="Adresa e dorëzimit">
+          <input name="delivery_address" className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold" />
+        </Field>
+        <Field label="Transporti">
+          <input name="transport" className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold" />
+        </Field>
+        <Field label="Shënime">
+          <textarea name="notes" rows={2} className="w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm outline-none focus:border-gold" />
+        </Field>
+      </Collapsible>
+
+      {error && (
+        <p className="rounded-xl border border-danger bg-danger/5 px-4 py-3 text-sm text-danger">{error}</p>
+      )}
+
+      <Button type="submit" className="w-full" disabled={saving || (!customerId && !customerLabel.trim())}>
+        {saving ? "Duke ruajtur…" : "Ruaj porosinë"}
       </Button>
     </form>
   );

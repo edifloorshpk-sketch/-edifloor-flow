@@ -94,3 +94,11 @@ export async function updateOrderStatus(orderId: string, status: string) {
   if (error) throw new Error(error.message);
   revalidatePath(`/orders/${orderId}`);
 }
+
+export async function archiveProductOrder(orderId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("product_orders").update({ is_archived: true }).eq("id", orderId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/orders");
+  redirect("/orders");
+}

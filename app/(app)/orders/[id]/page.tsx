@@ -6,6 +6,8 @@ import { PRODUCT_ORDER_STATUS_LABELS, PRIORITY_LABELS, type ProductOrderStatus }
 import { OrderStatusControl } from "@/components/orders/status-control";
 import { buildWhatsAppLink } from "@/lib/whatsapp";
 import { FileText, MessageCircle } from "lucide-react";
+import { archiveProductOrder } from "@/app/actions/orders";
+import { DeleteButton } from "@/components/ui/delete-button";
 
 export const dynamic = "force-dynamic";
 
@@ -98,6 +100,12 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           <p>{order.delivery_address ?? "—"}</p>
         </div>
       </div>
+
+      <DeleteButton
+        label="Fshij porosinë"
+        confirmLabel="Konfirmo fshirjen"
+        action={archiveProductOrder.bind(null, order.id)}
+      />
     </div>
   );
 }

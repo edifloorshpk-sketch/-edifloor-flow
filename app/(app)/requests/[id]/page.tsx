@@ -6,6 +6,8 @@ import { WORK_REQUEST_STATUS_LABELS } from "@/lib/types/database";
 import { ConvertToProjectButton } from "@/components/requests/convert-button";
 import { buildWhatsAppLink } from "@/lib/whatsapp";
 import { MessageCircle } from "lucide-react";
+import { archiveWorkRequest } from "@/app/actions/requests";
+import { DeleteButton } from "@/components/ui/delete-button";
 
 export const dynamic = "force-dynamic";
 
@@ -82,6 +84,12 @@ export default async function WorkRequestDetailPage({ params }: { params: Promis
           <ConvertToProjectButton requestId={request.id} />
         )
       )}
+
+      <DeleteButton
+        label="Fshij kërkesën"
+        confirmLabel="Konfirmo fshirjen"
+        action={archiveWorkRequest.bind(null, request.id)}
+      />
     </div>
   );
 }

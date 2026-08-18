@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { PRODUCT_ORDER_STATUS_LABELS, PRIORITY_LABELS, type ProductOrderStatus } from "@/lib/types/database";
 import { OrderStatusControl } from "@/components/orders/status-control";
 import { buildWhatsAppLink } from "@/lib/whatsapp";
-import { FileText, MessageCircle } from "lucide-react";
+import { FileText, MessageCircle, Factory } from "lucide-react";
 import { archiveProductOrder } from "@/app/actions/orders";
 import { DeleteButton } from "@/components/ui/delete-button";
 
@@ -20,9 +20,10 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: order }, { data: items }] = await Promise.all([
+  const [{ data: order }, { data: items }, { data: settings }] = await Promise.all([
     supabase.from("product_orders").select("*, customers(id, name, phone, whatsapp), staff_members(name)").eq("id", id).single(),
     supabase.from("product_order_items").select("*, products(name, code)").eq("product_order_id", id),
+    supabase.from("company_settings").select("factory_whatsapp").eq("id", 1).single(),
   ]);
 
   if (!order) notFound();
@@ -30,6 +31,12 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
 
   const waMessage = `Përshëndetje ${customer.name}, ju shkruajmë nga Edifloor Group për porosinë ${order.order_number}. Statusi aktual: ${PRODUCT_ORDER_STATUS_LABELS[order.status as ProductOrderStatus]}.${order.requested_deadline ? ` Afati: ${order.requested_deadline}.` : ""}`;
   const waLink = buildWhatsAppLink(customer.whatsapp || customer.phone, waMessage);
+
+  const itemsList = (items ?? [])
+    .map((it) => `• ${it.products?.name ?? ""}: ${it.quantity} ${it.unit}${it.color_ral ? ` (${it.color_ral})` : ""}`)
+    .join("\n");
+  const factoryMessage = `POROSI E RE — ${order.order_number}\nKlienti: ${customer.name}\n${order.requested_deadline ? `Afati: ${order.requested_deadline}\n` : ""}\nProduktet:\n${itemsList}`;
+  const factoryLink = buildWhatsAppLink(settings?.factory_whatsapp, factoryMessage);
 
   return (
     <div className="space-y-5">
@@ -67,6 +74,20 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           </a>
         )}
       </div>
+
+      {factoryLink ? (
+        <a
+          href={factoryLink}
+          target="_blank"
+          className="tap-target flex items-center justify-center gap-2 rounded-xl bg-gold text-sm font-medium text-gold-foreground"
+        >
+          <Factory className="h-4 w-4" /> Dërgo te Fabrika (WhatsApp)
+        </a>
+      ) : (
+        <p className="rounded-xl border border-dashed border-border p-3 text-center text-xs text-muted">
+          Vendos numrin e Fabrikës te Paneli administrativ → Të dhënat e kompanisë, që ky buton të shfaqet.
+        </p>
+      )}
 
       <section>
         <h2 className="mb-2 font-display text-base font-semibold">Produktet</h2>

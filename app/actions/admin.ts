@@ -181,6 +181,7 @@ export async function updateCompanySettings(formData: FormData) {
     phone: (formData.get("phone") as string) || null,
     email: (formData.get("email") as string) || null,
     vat_rate: numOrNull(formData.get("vat_rate")) ?? 18,
+    factory_whatsapp: (formData.get("factory_whatsapp") as string) || null,
   };
   const { error } = await supabase.from("company_settings").update(patch).eq("id", 1);
   if (error) throw new Error(error.message);

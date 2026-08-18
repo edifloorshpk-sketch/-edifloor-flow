@@ -44,6 +44,17 @@ export default async function AdminCompanyPage() {
         <Field label="TVSH (%)">
           <input name="vat_rate" type="number" step="0.1" defaultValue={settings?.vat_rate ?? 18} className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold" />
         </Field>
+        <Field label="Numri WhatsApp i Fabrikës (për njoftime porosish)">
+          <input
+            name="factory_whatsapp"
+            placeholder="p.sh. +38344123456"
+            defaultValue={settings?.factory_whatsapp ?? ""}
+            className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold"
+          />
+          <p className="mt-1 text-xs text-muted">
+            Numri i personit që e menaxhon grupin &quot;Fabrika&quot; në WhatsApp. Çdo porosi do të ketë buton për ta dërguar drejt këtij numri.
+          </p>
+        </Field>
         <Button type="submit" className="w-full">Ruaj</Button>
       </form>
     </div>

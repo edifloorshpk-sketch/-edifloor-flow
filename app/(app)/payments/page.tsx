@@ -14,19 +14,22 @@ export default async function PaymentsPage() {
     .order("paid_at", { ascending: false })
     .limit(50);
 
-  // resolve order/request numbers for display
+  // resolve names for display — customer (new format) or order/request (legacy)
+  const customerIds = (payments ?? []).filter((p) => p.related_type === "customer").map((p) => p.related_id);
   const orderIds = (payments ?? []).filter((p) => p.related_type === "product_order").map((p) => p.related_id);
   const requestIds = (payments ?? []).filter((p) => p.related_type === "work_request").map((p) => p.related_id);
 
-  const [{ data: orders }, { data: requests }] = await Promise.all([
+  const [{ data: customers }, { data: orders }, { data: requests }] = await Promise.all([
+    customerIds.length ? supabase.from("customers").select("id, name").in("id", customerIds) : Promise.resolve({ data: [] }),
     orderIds.length ? supabase.from("product_orders").select("id, order_number").in("id", orderIds) : Promise.resolve({ data: [] }),
     requestIds.length ? supabase.from("work_requests").select("id, request_number").in("id", requestIds) : Promise.resolve({ data: [] }),
   ]);
 
-  const labelFor = (type: string, id: string) =>
-    type === "product_order"
-      ? orders?.find((o) => o.id === id)?.order_number
-      : requests?.find((r) => r.id === id)?.request_number;
+  const labelFor = (type: string, id: string) => {
+    if (type === "customer") return customers?.find((c) => c.id === id)?.name;
+    if (type === "product_order") return orders?.find((o) => o.id === id)?.order_number;
+    return requests?.find((r) => r.id === id)?.request_number;
+  };
 
   const total = (payments ?? []).reduce((sum, p) => sum + Number(p.amount), 0);
 

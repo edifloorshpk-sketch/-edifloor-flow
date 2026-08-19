@@ -1,55 +1,76 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { recordPayment, searchPayableOrders } from "@/app/actions/payments";
+import { useRouter } from "next/navigation";
+import { recordPayment, searchCustomersForPayment } from "@/app/actions/payments";
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
 
 export function NewPaymentForm() {
-  const [label, setLabel] = useState("");
-  const [selected, setSelected] = useState<{ id: string; type: string } | null>(null);
-  const [results, setResults] = useState<{ id: string; label: string; type: "product_order" | "work_request" }[]>([]);
+  const [customerId, setCustomerId] = useState("");
+  const [customerLabel, setCustomerLabel] = useState("");
+  const [results, setResults] = useState<{ id: string; name: string; phone: string | null }[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [, startTransition] = useTransition();
+  const router = useRouter();
 
   function onSearch(term: string) {
-    setLabel(term);
-    setSelected(null);
+    setCustomerLabel(term);
+    setCustomerId("");
     startTransition(async () => {
-      const r = await searchPayableOrders(term);
+      const r = await searchCustomersForPayment(term);
       setResults(r);
     });
   }
 
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    setSaving(true);
+    try {
+      await recordPayment(new FormData(e.currentTarget));
+      router.push("/payments");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      setSaving(false);
+    }
+  }
+
   return (
-    <form action={recordPayment} className="space-y-4">
-      <input type="hidden" name="related_id" value={selected?.id ?? ""} />
-      <input type="hidden" name="related_type" value={selected?.type ?? "product_order"} />
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <input type="hidden" name="customer_id" value={customerId} />
+      <input type="hidden" name="customer_name" value={customerId ? "" : customerLabel} />
 
       <label className="block">
-        <span className="mb-1.5 block text-sm text-muted">Porosia ose kërkesa *</span>
+        <span className="mb-1.5 block text-sm text-muted">Emri i klientit *</span>
         <input
-          value={label}
+          value={customerLabel}
           onChange={(e) => onSearch(e.target.value)}
-          placeholder="ED-P-2026-0001 ose ED-W-2026-0001"
+          placeholder="Shkruaj emrin e klientit…"
           className="tap-target w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:border-gold"
         />
-        {results.length > 0 && !selected && (
+        {results.length > 0 && !customerId && (
           <div className="mt-1 space-y-1 rounded-xl border border-border bg-surface p-1">
-            {results.map((r) => (
+            {results.map((c) => (
               <button
-                key={r.id}
+                key={c.id}
                 type="button"
                 onClick={() => {
-                  setSelected({ id: r.id, type: r.type });
-                  setLabel(r.label);
+                  setCustomerId(c.id);
+                  setCustomerLabel(c.name);
                   setResults([]);
                 }}
                 className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-surface-raised"
               >
-                <Search className="h-3.5 w-3.5 text-muted" /> {r.label}
+                <Search className="h-3.5 w-3.5 text-muted" /> {c.name} {c.phone ? `· ${c.phone}` : ""}
               </button>
             ))}
           </div>
+        )}
+        {!customerId && customerLabel && (
+          <p className="mt-1 text-xs text-muted">Klient i ri: &quot;{customerLabel}&quot;</p>
         )}
       </label>
 
@@ -73,7 +94,13 @@ export function NewPaymentForm() {
         </label>
       </div>
 
-      <Button type="submit" className="w-full" disabled={!selected}>Ruaj pagesën</Button>
+      {error && (
+        <p className="rounded-xl border border-danger bg-danger/5 px-4 py-3 text-sm text-danger">{error}</p>
+      )}
+
+      <Button type="submit" className="w-full" disabled={saving || (!customerId && !customerLabel.trim())}>
+        {saving ? "Duke ruajtur…" : "Ruaj pagesën"}
+      </Button>
     </form>
   );
 }

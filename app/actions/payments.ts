@@ -9,30 +9,43 @@ export async function recordPayment(formData: FormData) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  let customerId = String(formData.get("customer_id") ?? "");
+  if (!customerId) {
+    const newName = String(formData.get("customer_name") ?? "").trim();
+    if (!newName) throw new Error("Shkruaj emrin e klientit");
+    const { data: newCustomer, error: customerError } = await supabase
+      .from("customers")
+      .insert({ name: newName, created_by: user?.id })
+      .select("id")
+      .single();
+    if (customerError || !newCustomer) throw new Error(customerError?.message ?? "Gabim gjatë krijimit të klientit");
+    customerId = newCustomer.id;
+  }
+
+  const amount = Number(formData.get("amount") ?? 0);
+  if (!amount) throw new Error("Shkruaj shumën");
+
   const payload = {
-    related_type: String(formData.get("related_type") ?? "product_order"),
-    related_id: String(formData.get("related_id") ?? ""),
-    amount: Number(formData.get("amount") ?? 0),
+    related_type: "customer",
+    related_id: customerId,
+    amount,
     paid_at: (formData.get("paid_at") as string) || new Date().toISOString().slice(0, 10),
     method: (formData.get("method") as string) || null,
     recorded_by: user?.id,
   };
-  if (!payload.related_id || !payload.amount) throw new Error("Plotëso porosinë/kërkesën dhe shumën");
 
   const { error } = await supabase.from("payments").insert(payload);
   if (error) throw new Error(error.message);
   revalidatePath("/payments");
 }
 
-export async function searchPayableOrders(term: string) {
+export async function searchCustomersForPayment(term: string) {
   if (!term || term.length < 2) return [];
   const supabase = await createClient();
-  const [{ data: orders }, { data: requests }] = await Promise.all([
-    supabase.from("product_orders").select("id, order_number").ilike("order_number", `%${term}%`).limit(5),
-    supabase.from("work_requests").select("id, request_number").ilike("request_number", `%${term}%`).limit(5),
-  ]);
-  return [
-    ...(orders ?? []).map((o) => ({ id: o.id, label: o.order_number, type: "product_order" as const })),
-    ...(requests ?? []).map((r) => ({ id: r.id, label: r.request_number, type: "work_request" as const })),
-  ];
+  const { data } = await supabase
+    .from("customers")
+    .select("id, name, phone")
+    .or(`name.ilike.%${term}%,phone.ilike.%${term}%`)
+    .limit(8);
+  return data ?? [];
 }

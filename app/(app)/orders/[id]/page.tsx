@@ -8,6 +8,8 @@ import { buildWhatsAppLink } from "@/lib/whatsapp";
 import { FileText, MessageCircle, Factory } from "lucide-react";
 import { archiveProductOrder } from "@/app/actions/orders";
 import { DeleteButton } from "@/components/ui/delete-button";
+import { AutoNotifyWhatsApp } from "@/components/orders/auto-notify-whatsapp";
+import { CopyMessageButton } from "@/components/ui/copy-message-button";
 
 export const dynamic = "force-dynamic";
 
@@ -16,8 +18,15 @@ const STATUS_FLOW: ProductOrderStatus[] = [
   "kontrolli_cilesise", "gati", "ne_transport", "e_dorezuar", "e_perfunduar",
 ];
 
-export default async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function OrderDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ notify?: string }>;
+}) {
   const { id } = await params;
+  const { notify } = await searchParams;
   const supabase = await createClient();
 
   const [{ data: order }, { data: items }, { data: settings }] = await Promise.all([
@@ -40,6 +49,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
 
   return (
     <div className="space-y-5">
+      <AutoNotifyWhatsApp link={factoryLink} shouldTrigger={notify === "fabrika"} />
       <div>
         <p className="text-xs uppercase tracking-wide text-gold">{order.order_number}</p>
         <h1 className="font-display text-xl font-semibold">
@@ -76,17 +86,23 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
       </div>
 
       {factoryLink ? (
-        <a
-          href={factoryLink}
-          target="_blank"
-          className="tap-target flex items-center justify-center gap-2 rounded-xl bg-gold text-sm font-medium text-gold-foreground"
-        >
-          <Factory className="h-4 w-4" /> Dërgo te Fabrika (WhatsApp)
-        </a>
+        <div className="grid grid-cols-2 gap-2">
+          <a
+            href={factoryLink}
+            target="_blank"
+            className="tap-target flex items-center justify-center gap-2 rounded-xl bg-gold text-sm font-medium text-gold-foreground"
+          >
+            <Factory className="h-4 w-4" /> Dërgo te Fabrika
+          </a>
+          <CopyMessageButton message={factoryMessage} label="Kopjo për grupin" />
+        </div>
       ) : (
-        <p className="rounded-xl border border-dashed border-border p-3 text-center text-xs text-muted">
-          Vendos numrin e Fabrikës te Paneli administrativ → Të dhënat e kompanisë, që ky buton të shfaqet.
-        </p>
+        <div className="space-y-2">
+          <p className="rounded-xl border border-dashed border-border p-3 text-center text-xs text-muted">
+            Vendos numrin e Fabrikës te Paneli administrativ → Të dhënat e kompanisë, që butoni i dërgimit automatik të shfaqet.
+          </p>
+          <CopyMessageButton message={factoryMessage} label="Kopjo mesazhin për grupin" />
+        </div>
       )}
 
       <section>

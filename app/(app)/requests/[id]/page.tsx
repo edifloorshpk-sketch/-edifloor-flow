@@ -4,8 +4,6 @@ import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { WORK_REQUEST_STATUS_LABELS } from "@/lib/types/database";
 import { ConvertToProjectButton } from "@/components/requests/convert-button";
-import { buildWhatsAppLink } from "@/lib/whatsapp";
-import { MessageCircle } from "lucide-react";
 import { archiveWorkRequest } from "@/app/actions/requests";
 import { DeleteButton } from "@/components/ui/delete-button";
 
@@ -16,16 +14,13 @@ export default async function WorkRequestDetailPage({ params }: { params: Promis
   const supabase = await createClient();
 
   const [{ data: request }, { data: project }] = await Promise.all([
-    supabase.from("work_requests").select("*, customers(id, name, phone, whatsapp), floor_systems(name, layer_count), staff_members(name)").eq("id", id).single(),
+    supabase.from("work_requests").select("*, customers(id, name, phone), floor_systems(name, layer_count), staff_members(name)").eq("id", id).single(),
     supabase.from("projects").select("id, status").eq("work_request_id", id).maybeSingle(),
   ]);
 
   if (!request) notFound();
   const customer = request.customers;
   const system = request.floor_systems;
-
-  const waMessage = `Përshëndetje ${customer.name}, ju shkruajmë nga Edifloor Group për kërkesën ${request.request_number}. Statusi aktual: ${WORK_REQUEST_STATUS_LABELS[request.status as keyof typeof WORK_REQUEST_STATUS_LABELS]}.${request.deadline ? ` Afati: ${request.deadline}.` : ""}`;
-  const waLink = buildWhatsAppLink(customer.whatsapp || customer.phone, waMessage);
 
   return (
     <div className="space-y-5">
@@ -46,16 +41,6 @@ export default async function WorkRequestDetailPage({ params }: { params: Promis
           {WORK_REQUEST_STATUS_LABELS[request.status as keyof typeof WORK_REQUEST_STATUS_LABELS]}
         </span>
       </Card>
-
-      {waLink && (
-        <a
-          href={waLink}
-          target="_blank"
-          className="tap-target flex items-center justify-center gap-2 rounded-xl border border-ok text-sm font-medium text-ok hover:bg-ok/10"
-        >
-          <MessageCircle className="h-4 w-4" /> Dërgo në WhatsApp
-        </a>
-      )}
 
       <div className="grid grid-cols-2 gap-3 text-sm">
         <Info label="Sipërfaqja" value={`${request.area_sqm ?? "—"} m²`} />

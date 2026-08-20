@@ -8,7 +8,7 @@ import {
   type ProductOrderStatus,
   type WorkRequestStatus,
 } from "@/lib/types/database";
-import { Phone, MessageCircle, Mail, MapPin, Package, HardHat } from "lucide-react";
+import { Phone, Mail, MapPin, Package, HardHat } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +30,6 @@ export default async function CustomerDetailPage({
 
   const actions = [
     customer.phone && { icon: Phone, label: "Telefono", href: `tel:${customer.phone}` },
-    customer.whatsapp && { icon: MessageCircle, label: "WhatsApp", href: `https://wa.me/${customer.whatsapp.replace(/\D/g, "")}` },
     customer.email && { icon: Mail, label: "Email", href: `mailto:${customer.email}` },
     customer.address && { icon: MapPin, label: "Lokacioni", href: `https://maps.google.com/?q=${encodeURIComponent(customer.address)}` },
   ].filter(Boolean) as { icon: typeof Phone; label: string; href: string }[];

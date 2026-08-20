@@ -4,12 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { PRODUCT_ORDER_STATUS_LABELS, PRIORITY_LABELS, type ProductOrderStatus } from "@/lib/types/database";
 import { OrderStatusControl } from "@/components/orders/status-control";
-import { buildWhatsAppLink } from "@/lib/whatsapp";
-import { FileText, MessageCircle, Factory } from "lucide-react";
+import { FileText } from "lucide-react";
 import { archiveProductOrder } from "@/app/actions/orders";
 import { DeleteButton } from "@/components/ui/delete-button";
-import { AutoNotifyWhatsApp } from "@/components/orders/auto-notify-whatsapp";
-import { CopyMessageButton } from "@/components/ui/copy-message-button";
 
 export const dynamic = "force-dynamic";
 
@@ -18,38 +15,20 @@ const STATUS_FLOW: ProductOrderStatus[] = [
   "kontrolli_cilesise", "gati", "ne_transport", "e_dorezuar", "e_perfunduar",
 ];
 
-export default async function OrderDetailPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<{ notify?: string }>;
-}) {
+export default async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { notify } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: order }, { data: items }, { data: settings }] = await Promise.all([
-    supabase.from("product_orders").select("*, customers(id, name, phone, whatsapp), staff_members(name)").eq("id", id).single(),
+  const [{ data: order }, { data: items }] = await Promise.all([
+    supabase.from("product_orders").select("*, customers(id, name, phone), staff_members(name)").eq("id", id).single(),
     supabase.from("product_order_items").select("*, products(name, code)").eq("product_order_id", id),
-    supabase.from("company_settings").select("factory_whatsapp").eq("id", 1).single(),
   ]);
 
   if (!order) notFound();
   const customer = order.customers;
 
-  const waMessage = `Përshëndetje ${customer.name}, ju shkruajmë nga Edifloor Group për porosinë ${order.order_number}. Statusi aktual: ${PRODUCT_ORDER_STATUS_LABELS[order.status as ProductOrderStatus]}.${order.requested_deadline ? ` Afati: ${order.requested_deadline}.` : ""}`;
-  const waLink = buildWhatsAppLink(customer.whatsapp || customer.phone, waMessage);
-
-  const itemsList = (items ?? [])
-    .map((it) => `• ${it.products?.name ?? ""}: ${it.quantity} ${it.unit}${it.color_ral ? ` (${it.color_ral})` : ""}`)
-    .join("\n");
-  const factoryMessage = `POROSI E RE — ${order.order_number}\nKlienti: ${customer.name}\n${order.requested_deadline ? `Afati: ${order.requested_deadline}\n` : ""}\nProduktet:\n${itemsList}`;
-  const factoryLink = buildWhatsAppLink(settings?.factory_whatsapp, factoryMessage);
-
   return (
     <div className="space-y-5">
-      <AutoNotifyWhatsApp link={factoryLink} shouldTrigger={notify === "fabrika"} />
       <div>
         <p className="text-xs uppercase tracking-wide text-gold">{order.order_number}</p>
         <h1 className="font-display text-xl font-semibold">
@@ -66,44 +45,13 @@ export default async function OrderDetailPage({
         <OrderStatusControl orderId={order.id} currentStatus={order.status} flow={STATUS_FLOW} labels={PRODUCT_ORDER_STATUS_LABELS} />
       </Card>
 
-      <div className="grid grid-cols-2 gap-2">
-        <Link
-          href={`/print/orders/${order.id}`}
-          target="_blank"
-          className="tap-target flex items-center justify-center gap-2 rounded-xl border border-border bg-surface text-sm font-medium hover:border-gold"
-        >
-          <FileText className="h-4 w-4" /> Printo (PDF)
-        </Link>
-        {waLink && (
-          <a
-            href={waLink}
-            target="_blank"
-            className="tap-target flex items-center justify-center gap-2 rounded-xl border border-ok text-sm font-medium text-ok hover:bg-ok/10"
-          >
-            <MessageCircle className="h-4 w-4" /> Dërgo në WhatsApp
-          </a>
-        )}
-      </div>
-
-      {factoryLink ? (
-        <div className="grid grid-cols-2 gap-2">
-          <a
-            href={factoryLink}
-            target="_blank"
-            className="tap-target flex items-center justify-center gap-2 rounded-xl bg-gold text-sm font-medium text-gold-foreground"
-          >
-            <Factory className="h-4 w-4" /> Dërgo te Fabrika
-          </a>
-          <CopyMessageButton message={factoryMessage} label="Kopjo për grupin" />
-        </div>
-      ) : (
-        <div className="space-y-2">
-          <p className="rounded-xl border border-dashed border-border p-3 text-center text-xs text-muted">
-            Vendos numrin e Fabrikës te Paneli administrativ → Të dhënat e kompanisë, që butoni i dërgimit automatik të shfaqet.
-          </p>
-          <CopyMessageButton message={factoryMessage} label="Kopjo mesazhin për grupin" />
-        </div>
-      )}
+      <Link
+        href={`/print/orders/${order.id}`}
+        target="_blank"
+        className="tap-target flex items-center justify-center gap-2 rounded-xl border border-border bg-surface text-sm font-medium hover:border-gold"
+      >
+        <FileText className="h-4 w-4" /> Printo (PDF)
+      </Link>
 
       <section>
         <h2 className="mb-2 font-display text-base font-semibold">Produktet</h2>

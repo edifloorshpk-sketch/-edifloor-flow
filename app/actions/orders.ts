@@ -85,7 +85,7 @@ export async function createProductOrder(formData: FormData) {
   );
 
   revalidatePath("/orders");
-  redirect(`/orders/${order.id}?notify=fabrika`);
+  redirect(`/orders/${order.id}`);
 }
 
 export async function updateOrderStatus(orderId: string, status: string) {
